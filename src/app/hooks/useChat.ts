@@ -44,6 +44,7 @@ export function useChat(initialMessages: Message[] = []) {
 
       setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
 
+      // interesting, I've only used while (true) before, but I guess this saves you checking the condition at all 🤔
       for (; ;) {
         const { value, done } = await reader.read();
         if (done) break;

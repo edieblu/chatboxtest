@@ -2,7 +2,7 @@ import OpenAI from 'openai';
 import { chatRequestSchema } from '@/app/lib/validations';
 
 export const runtime = 'edge'
-
+// OPENAI_API_KEY should be set in your environment variables and is assumed here
 const client = new OpenAI();
 
 const SYSTEM_PROMPT = `You are a friendly travel assistant chatbot specializing in world geography. Your role is to:
@@ -51,17 +51,25 @@ export async function POST(req: Request) {
       instructions: contextualPrompt,
       input: message,
       stream: true,
+      // one word is around 1.33 tokens, so 150 words is about 200 tokens
       max_output_tokens: 200,
+      // value between 0 and 2. Higher values like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic.
       temperature: 0.7,
     });
 
+    // from openai docs:
+    // Common events to listen for when streaming text are:
+    //- `response.created`
+    //- `response.output_text.delta`
+    //- `response.completed`
+    //- `error`
     const readableStream = new ReadableStream({
       async start(controller) {
         console.log(`Received message: ${message}`)
         try {
-          for await (const chunk of stream) {
-            if (chunk.type === 'response.output_text.delta' && chunk.delta) {
-              controller.enqueue(encoder.encode(chunk.delta))
+          for await (const event of stream) {
+            if (event.type === 'response.output_text.delta' && event.delta) {
+              controller.enqueue(encoder.encode(event.delta))
             }
           }
         } catch (error) {
