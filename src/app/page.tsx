@@ -1,16 +1,40 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useChat } from "@/app/hooks/useChat";
 import { INITIAL_MESSAGE } from "./const";
+import Confetti from "react-confetti";
 
 export default function Home() {
   const [input, setInput] = useState("");
+  const [showConfetti, setShowConfetti] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+  const confettiTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const { messages, isLoading, error, sendMessage } = useChat([
-    INITIAL_MESSAGE,
-  ]);
+  const triggerConfetti = useCallback(() => {
+    if (confettiTimeoutRef.current) {
+      clearTimeout(confettiTimeoutRef.current);
+    }
+
+    setShowConfetti(true);
+    confettiTimeoutRef.current = setTimeout(() => {
+      setShowConfetti(false);
+      confettiTimeoutRef.current = null;
+    }, 3000);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (confettiTimeoutRef.current) {
+        clearTimeout(confettiTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const { messages, isLoading, error, sendMessage } = useChat(
+    [INITIAL_MESSAGE],
+    triggerConfetti
+  );
 
   useEffect(() => {
     endRef.current?.scrollIntoView();
@@ -26,62 +50,72 @@ export default function Home() {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 w-80 h-96 flex flex-col rounded-lg shadow-lg border bg-white dark:bg-gray-900">
-      <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded-t-lg border-b">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Travel Assistant
-            </h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Say &quot;change preferences&quot; to restart onboarding
-            </p>
+    <>
+      {showConfetti && (
+        <Confetti
+          width={window.innerWidth}
+          height={window.innerHeight}
+          recycle={false}
+          numberOfPieces={200}
+        />
+      )}
+      <div className="fixed bottom-6 right-6 w-80 h-96 flex flex-col rounded-lg shadow-lg border bg-white dark:bg-gray-900">
+        <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded-t-lg border-b">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Travel Assistant
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Say &quot;change preferences&quot; to restart
+              </p>
+            </div>
+            {isLoading && (
+              <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
+                <div className="animate-spin rounded-full h-3 w-3 border border-gray-300 border-t-gray-600 mr-1"></div>
+                Thinking...
+              </div>
+            )}
           </div>
-          {isLoading && (
-            <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
-              <div className="animate-spin rounded-full h-3 w-3 border border-gray-300 border-t-gray-600 mr-1"></div>
-              Thinking...
+          {error && (
+            <div className="mt-1 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded">
+              {error}
             </div>
           )}
         </div>
-        {error && (
-          <div className="mt-1 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded">
-            {error}
-          </div>
-        )}
-      </div>
-      <div className="flex-1 p-3 overflow-y-auto space-y-2 text-sm">
-        {messages.map((msg, i) => (
-          <div
-            key={i}
-            className={`max-w-[75%] break-words ${
-              msg.role === "user"
-                ? "self-end bg-blue-600 text-white"
-                : "self-start bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-gray-50"
-            } rounded-md px-3 py-1`}
+        <div className="flex-1 p-3 overflow-y-auto space-y-2 text-sm">
+          {messages.map((msg, i) => (
+            <div
+              key={i}
+              className={`max-w-[75%] break-words ${
+                msg.role === "user"
+                  ? "self-end bg-blue-600 text-white"
+                  : "self-start bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-gray-50"
+              } rounded-md px-3 py-1`}
+            >
+              {msg.content}
+            </div>
+          ))}
+          <div ref={endRef} />
+        </div>
+        <div className="p-3 flex gap-2">
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && send()}
+            className="flex-1 rounded-md border px-2 py-1 text-sm bg-transparent outline-none"
+            placeholder="Type a message"
+            disabled={isLoading}
+          />
+          <button
+            onClick={send}
+            disabled={isLoading || !input.trim()}
+            className="px-3 py-1 rounded-md bg-blue-600 text-white text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {msg.content}
-          </div>
-        ))}
-        <div ref={endRef} />
+            {isLoading ? "Sending..." : "Send"}
+          </button>
+        </div>
       </div>
-      <div className="p-3 flex gap-2">
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && send()}
-          className="flex-1 rounded-md border px-2 py-1 text-sm bg-transparent outline-none"
-          placeholder="Type a message"
-          disabled={isLoading}
-        />
-        <button
-          onClick={send}
-          disabled={isLoading || !input.trim()}
-          className="px-3 py-1 rounded-md bg-blue-600 text-white text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isLoading ? "Sending..." : "Send"}
-        </button>
-      </div>
-    </div>
+    </>
   );
 }

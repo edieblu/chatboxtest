@@ -1,7 +1,9 @@
 import OpenAI from 'openai';
+import { ZodError } from 'zod';
 import { chatRequestSchema } from '@/app/lib/validations';
 
 export const runtime = 'edge'
+
 // OPENAI_API_KEY should be set in your environment variables and is assumed here
 const client = new OpenAI();
 
@@ -92,7 +94,7 @@ export async function POST(req: Request) {
       timestamp: new Date().toISOString()
     })
 
-    if (error instanceof Error && error.name === 'ZodError') {
+    if (error instanceof ZodError) {
       return new Response(JSON.stringify({
         error: 'Invalid input provided',
         type: 'validation_error'

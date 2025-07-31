@@ -6,10 +6,8 @@ export const messageSchema = z.object({
 });
 
 export const chatRequestSchema = z.object({
-  message: z.string()
-    .trim(),
-  chatHistory: z.array(messageSchema)
-    .default([]),
+  message: z.string().trim(),
+  chatHistory: z.array(messageSchema).default([]),
 });
 
 export const chatResponseSchema = z.object({

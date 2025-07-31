@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { type Message, messageSchema, chatRequestSchema } from '@/app/lib/validations';
 
-export function useChat(initialMessages: Message[] = []) {
+export function useChat(initialMessages: Message[] = [], onSloveniaMatch?: () => void) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -11,6 +11,10 @@ export function useChat(initialMessages: Message[] = []) {
 
     setIsLoading(true);
     setError(null);
+
+    if (content.toLowerCase().includes('slovenia')) {
+      onSloveniaMatch?.();
+    }
 
     const userMessage: Message = messageSchema.parse({
       role: 'user',
@@ -53,7 +57,9 @@ export function useChat(initialMessages: Message[] = []) {
 
         setMessages(prev => {
           const updated = [...prev];
-          updated[updated.length - 1].content = aiContent;
+          if (updated.length > 0 && updated[updated.length - 1].role === 'assistant') {
+            updated[updated.length - 1].content = aiContent;
+          }
           return updated;
         });
       }
