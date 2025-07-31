@@ -67,3 +67,9 @@ Once you've completed the task, please email Rory at [rory@askvinny.co.uk] to sc
 - add nvmrc file
 - add env file
 - add openai
+- implement streaming chatbot with OpenAI GPT-4.1
+- add three-step onboarding flow for travel preferences
+- implement Zod validation schemas for type safety
+- add error handling + comments + cleanup
+- add easter egg
+- deploy to Vercel: https://chatboxtest-six.vercel.app/
