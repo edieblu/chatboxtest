@@ -60,3 +60,9 @@ Your mission is to transform this chatbot into an extraordinary conversational a
 ## 📧 Completion
 
 Once you've completed the task, please email Rory at [rory@askvinny.co.uk] to schedule a review call and discuss your implementation.
+
+
+## 📝 Log
+- add nvmrc file
+- add env file
+- add openai
