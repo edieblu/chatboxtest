@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { useChat, type Message } from "@/app/hooks/useChat";
+import { useChat } from "@/app/hooks/useChat";
+import { type Message } from "@/app/lib/validations";
 
 const INITIAL_MESSAGE: Message = {
   role: "assistant",

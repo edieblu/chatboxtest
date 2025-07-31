@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import { chatRequestSchema } from '@/app/lib/validations';
 
 export const runtime = 'edge'
 
@@ -28,41 +29,69 @@ const SYSTEM_PROMPT = `You are a friendly travel assistant chatbot specializing 
 - Use relevant emojis throughout your responses to make them more engaging and memorable (🌍 🗺️ ✈️ 🏖️ 🏔️ 🏙️ 🏛️ 🎒 📍 etc.)`
 
 export async function POST(req: Request) {
-  const { message, chatHistory = [] } = await req.json()
   const encoder = new TextEncoder()
-  console.log(message, 'Chat history length:', chatHistory.length)
 
-  // Analyze chat history to determine onboarding progress
-  let contextualPrompt = SYSTEM_PROMPT
-  if (chatHistory.length > 1) {
-    contextualPrompt += `\n\nPrevious conversation:\n${chatHistory.join('\n')}\n\nBased on the conversation above, continue appropriately.`
-  }
-  const stream = await client.responses.create({
-    model: "gpt-4.1",
-    instructions: contextualPrompt,
-    input: message,
-    stream: true,
-  });
+  try {
+    const body = await req.json()
+    const validatedInput = chatRequestSchema.parse(body)
+    const { message, chatHistory } = validatedInput
 
-  const readableStream = new ReadableStream({
-    async start(controller) {
-      console.log(`Received message: ${message}`)
-      try {
-        for await (const chunk of stream) {
-          if (chunk.type === 'response.output_text.delta' && chunk.delta) {
-            controller.enqueue(encoder.encode(chunk.delta))
-          }
-        }
-      } catch (error) {
-        console.error('OpenAI streaming error:', error)
-        controller.error(error)
-      } finally {
-        controller.close()
-      }
+    console.log(message, 'Chat history length:', chatHistory.length)
+
+    // Analyze chat history to determine onboarding progress
+    let contextualPrompt = SYSTEM_PROMPT
+    if (chatHistory.length > 1) {
+      contextualPrompt += `\n\nPrevious conversation:\n${chatHistory.join('\n')}\n\nBased on the conversation above, continue appropriately.`
     }
-  })
 
-  return new Response(readableStream, {
-    headers: { 'Content-Type': 'text/plain; charset=utf-8' }
-  })
+    const stream = await client.responses.create({
+      model: "gpt-4.1",
+      instructions: contextualPrompt,
+      input: message,
+      stream: true,
+    });
+
+    const readableStream = new ReadableStream({
+      async start(controller) {
+        console.log(`Received message: ${message}`)
+        try {
+          for await (const chunk of stream) {
+            if (chunk.type === 'response.output_text.delta' && chunk.delta) {
+              controller.enqueue(encoder.encode(chunk.delta))
+            }
+          }
+        } catch (error) {
+          console.error('OpenAI streaming error:', error)
+          controller.error(error)
+        } finally {
+          controller.close()
+        }
+      }
+    })
+
+    return new Response(readableStream, {
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+    })
+
+  } catch (error) {
+    console.error('API validation error:', error)
+
+    if (error instanceof Error && error.name === 'ZodError') {
+      return new Response(JSON.stringify({
+        error: 'Invalid request format',
+        details: error.message
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
+
+    // Return generic error
+    return new Response(JSON.stringify({
+      error: 'Internal server error'
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    })
+  }
 }

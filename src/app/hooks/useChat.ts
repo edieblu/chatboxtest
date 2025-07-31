@@ -1,9 +1,5 @@
 import { useState } from 'react';
-
-export interface Message {
-  role: 'user' | 'assistant';
-  content: string;
-}
+import { type Message, messageSchema, chatRequestSchema } from '@/app/lib/validations';
 
 export function useChat(initialMessages: Message[] = []) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
@@ -16,18 +12,22 @@ export function useChat(initialMessages: Message[] = []) {
     setIsLoading(true);
     setError(null);
 
-    // Add user message
-    const userMessage: Message = { role: 'user', content: content.trim() };
+    const userMessage: Message = messageSchema.parse({
+      role: 'user',
+      content: content.trim()
+    });
     setMessages(prev => [...prev, userMessage]);
 
     try {
+      const requestPayload = chatRequestSchema.parse({
+        message: content.trim(),
+        chatHistory: [...messages, userMessage].map(m => m.content)
+      });
+
       const res = await fetch('/api/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          message: content.trim(), 
-          chatHistory: [...messages, userMessage].map(m => m.content)
-        }),
+        body: JSON.stringify(requestPayload),
       });
 
       if (!res.ok) {
@@ -45,13 +45,12 @@ export function useChat(initialMessages: Message[] = []) {
       // Add empty assistant message
       setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
 
-      // Stream the response
-      for (;;) {
+      for (; ;) {
         const { value, done } = await reader.read();
         if (done) break;
 
         aiContent += decoder.decode(value);
-        
+
         setMessages(prev => {
           const updated = [...prev];
           updated[updated.length - 1].content = aiContent;
@@ -62,7 +61,7 @@ export function useChat(initialMessages: Message[] = []) {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Something went wrong';
       setError(errorMessage);
-      
+
       // Remove empty assistant message on error
       setMessages(prev => prev.slice(0, -1));
     } finally {
