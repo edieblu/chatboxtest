@@ -1,13 +1,8 @@
 "use client";
+
 import { useState, useRef, useEffect } from "react";
 import { useChat } from "@/app/hooks/useChat";
-import { type Message } from "@/app/lib/validations";
-
-const INITIAL_MESSAGE: Message = {
-  role: "assistant",
-  content:
-    "Welcome to your personal travel assistant! I'd love to learn about your travel preferences. What is your favorite country to visit or would like to visit?",
-};
+import { INITIAL_MESSAGE } from "./const";
 
 export default function Home() {
   const [input, setInput] = useState("");
@@ -39,7 +34,7 @@ export default function Home() {
               Travel Assistant
             </h3>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              Say "change preferences" to restart onboarding
+              Say &quot;change preferences&quot; to restart onboarding
             </p>
           </div>
           {isLoading && (

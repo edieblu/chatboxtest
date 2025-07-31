@@ -7,12 +7,8 @@ export const messageSchema = z.object({
 
 export const chatRequestSchema = z.object({
   message: z.string()
-    .min(1, 'Message cannot be empty')
-    .max(1000, 'Message too long (max 1000 characters)')
     .trim(),
-  chatHistory: z.array(z.string())
-    .max(50, 'Chat history too long')
-    .optional()
+  chatHistory: z.array(messageSchema)
     .default([]),
 });
 
@@ -22,9 +18,9 @@ export const chatResponseSchema = z.object({
 });
 
 export const onboardingAnswerSchema = z.object({
-  country: z.string().min(1).max(100).optional(),
-  continent: z.string().min(1).max(50).optional(),
-  destinationType: z.string().min(1).max(100).optional(),
+  country: z.string(),
+  continent: z.string(),
+  destinationType: z.string(),
 });
 
 export type Message = z.infer<typeof messageSchema>;

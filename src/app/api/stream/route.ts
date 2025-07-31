@@ -38,10 +38,12 @@ export async function POST(req: Request) {
 
     console.log(message, 'Chat history length:', chatHistory.length)
 
-    // Analyze chat history to determine onboarding progress
     let contextualPrompt = SYSTEM_PROMPT
-    if (chatHistory.length > 1) {
-      contextualPrompt += `\n\nPrevious conversation:\n${chatHistory.join('\n')}\n\nBased on the conversation above, continue appropriately.`
+    if (chatHistory.length > 0) {
+      const conversationContext = chatHistory
+        .map(msg => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`)
+        .join('\n');
+      contextualPrompt += `\n\nPrevious conversation:\n${conversationContext}\n\nBased on the conversation above, continue appropriately.`
     }
 
     const stream = await client.responses.create({
@@ -76,21 +78,45 @@ export async function POST(req: Request) {
     })
 
   } catch (error) {
-    console.error('API validation error:', error)
+    console.error('API error:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date().toISOString()
+    })
 
     if (error instanceof Error && error.name === 'ZodError') {
       return new Response(JSON.stringify({
-        error: 'Invalid request format',
-        details: error.message
+        error: 'Invalid input provided',
+        type: 'validation_error'
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       })
     }
 
-    // Return generic error
+    if (error instanceof Error && error.message.includes('OpenAI')) {
+      return new Response(JSON.stringify({
+        error: 'AI service temporarily unavailable',
+        type: 'service_error'
+      }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
+
+    if (error instanceof Error && (error.message.includes('rate limit') || error.message.includes('429'))) {
+      return new Response(JSON.stringify({
+        error: 'Too many requests. Please try again in a moment.',
+        type: 'rate_limit_error'
+      }), {
+        status: 429,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
+
     return new Response(JSON.stringify({
-      error: 'Internal server error'
+      error: 'Something went wrong. Please try again.',
+      type: 'internal_error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

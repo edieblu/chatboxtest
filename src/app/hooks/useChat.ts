@@ -14,14 +14,14 @@ export function useChat(initialMessages: Message[] = []) {
 
     const userMessage: Message = messageSchema.parse({
       role: 'user',
-      content: content.trim()
+      content: content
     });
     setMessages(prev => [...prev, userMessage]);
 
     try {
       const requestPayload = chatRequestSchema.parse({
-        message: content.trim(),
-        chatHistory: [...messages, userMessage].map(m => m.content)
+        message: content,
+        chatHistory: [...messages, userMessage]
       });
 
       const res = await fetch('/api/stream', {
@@ -42,7 +42,6 @@ export function useChat(initialMessages: Message[] = []) {
       const decoder = new TextDecoder();
       let aiContent = '';
 
-      // Add empty assistant message
       setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
 
       for (; ;) {
@@ -62,7 +61,6 @@ export function useChat(initialMessages: Message[] = []) {
       const errorMessage = err instanceof Error ? err.message : 'Something went wrong';
       setError(errorMessage);
 
-      // Remove empty assistant message on error
       setMessages(prev => prev.slice(0, -1));
     } finally {
       setIsLoading(false);
