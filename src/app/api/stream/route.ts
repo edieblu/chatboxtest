@@ -26,12 +26,18 @@ const SYSTEM_PROMPT = `You are a friendly travel assistant chatbot specializing 
 - Be conversational and helpful`
 
 export async function POST(req: Request) {
-  const { message } = await req.json()
+  const { message, chatHistory = [] } = await req.json()
   const encoder = new TextEncoder()
-  console.log(message)
+  console.log(message, 'Chat history length:', chatHistory.length)
+
+  // Analyze chat history to determine onboarding progress
+  let contextualPrompt = SYSTEM_PROMPT
+  if (chatHistory.length > 1) {
+    contextualPrompt += `\n\nPrevious conversation:\n${chatHistory.join('\n')}\n\nBased on the conversation above, continue appropriately.`
+  }
   const stream = await client.responses.create({
     model: "gpt-4.1",
-    instructions: SYSTEM_PROMPT,
+    instructions: contextualPrompt,
     input: message,
     stream: true,
   });
@@ -41,7 +47,6 @@ export async function POST(req: Request) {
       console.log(`Received message: ${message}`)
       try {
         for await (const chunk of stream) {
-          console.log(chunk);
           if (chunk.type === 'response.output_text.delta' && chunk.delta) {
             controller.enqueue(encoder.encode(chunk.delta))
           }
